@@ -5,13 +5,17 @@
             #buttonContainer
             {
                 display: inline-block;
-                width: 1.2em;
-                height: 1.3em;
-                vertical-align: text-top;
+                width: 1.4em;
+                height: 1.4em;
+                padding:0;
+                margin:0;
+                vertical-align: middle;
+                min-height: 24px;
             }
             #incButton, #decButton
             {
-                font-size: 30%;
+                min-height: 12px;
+                font-size: 40%;
                 display: block;
                 width: 100%;
                 height: 49%;
@@ -22,7 +26,7 @@
 
         <span id="label"><content></content></span>
 
-        <input type="text" id="counterVal" on-change={{textFieldInputChanged}}" value="{{textFieldValue}}">
+        <input type="text" id="counterVal" on-change={{textFieldInputChanged}}" value="{{value}}">
 
         <div id="buttonContainer">
             <button id="incButton" on-mousedown="{{startIncrementManipulation}}" on-mouseup="{{stopManipulation}}">&#9650;</button>
@@ -32,23 +36,21 @@
     </template>
     <script>
         Polymer({
-            value: 0,
+            internalValue: 0,
 
-            min: 0,
+            min: -9999999,
 
-            max: 10,
+            max: 9999999,
 
             step: 1,
 
             inputValue: 0, // Default value
 
-            initialDelay: 100, //in ms
+            initialDelay: 500, //in ms
 
-            changeInterval: 10, //in ms
+            changeInterval: 110, //in ms
 
             currentChangeStep: 1,
-
-            oninput: null,
 
             accelerateManipulation: true,
 
@@ -62,38 +64,39 @@
 
             decimalPlaces: 2,
 
-            textFieldValue: "0",
+            value: "0",
 
             ready: function()
             {
-                this.inputValue = this.value;
+                this.textFieldInputChanged();
             },
 
             textFieldInputChanged: function()
             {
-                var parsedValue = parseFloat(this.textFieldValue);
+                var parsedValue = parseFloat(this.value);
 
-                if (!isNaN(parsedValue))
+                if (!isNaN(parsedValue) && parsedValue != this.internalValue)
                 {
+                    parsedValue = parseFloat(parsedValue.toFixed(this.decimalPlaces));
                     this.inputValue = Math.min(Math.max(this.min, parsedValue), this.max);
                 }
                 else
                 {
-                    this.textFieldValue = this.value;
+                    this.value = this.internalValue;
                 }
             },
 
             inputValueChanged: function()
             {
-                var lastVal = this.value;
+                var lastVal = this.internalValue;
 
-                this.value = parseFloat(this.inputValue.toFixed(this.decimalPlaces));
+                this.internalValue = parseFloat(this.inputValue.toFixed(this.decimalPlaces));
 
-                this.textFieldValue = this.value;
+                this.value = this.internalValue;
 
-                if ((this.value != lastVal) && this.oninput)
+                if (this.internalValue != lastVal)
                 {
-                    this.oninput(this.value);
+                    this.fire('input', {value: this.internalValue});
                 }
             },
 
@@ -102,6 +105,8 @@
                 this.manipulationDirection = -1;
 
                 this.textFieldInputChanged();
+
+                this.currentChangeStep = this.step;
 
                 this.decrementValue();
 
@@ -114,6 +119,8 @@
 
                 this.textFieldInputChanged();
 
+                this.currentChangeStep = this.step;
+
                 this.incrementValue();
 
                 this.initContinuousManipulation();
@@ -121,7 +128,6 @@
 
             initContinuousManipulation: function()
             {
-                this.currentChangeStep = this.step;
                 this.manipulationStart = Date.now();
                 this.scheduleNextValueManipulation(this.initialDelay);
             },
@@ -139,9 +145,13 @@
 
             computeChangeStep: function(t)
             {
-                var value = Math.min(this.maxManipulationSpeedTime, t) / this.maxManipulationSpeedTime;
+                var a = this.smoothstep(0, this.maxManipulationSpeedTime, Math.min(this.maxManipulationSpeedTime, t));
 
-                return this.step * this.maxManipulationSpeedFactor * this.smoothstep(0, this.maxManipulationSpeedTime, t);
+                var newStep = (1.0 - a) * this.step + a * (this.step * this.maxManipulationSpeedFactor);
+
+                newStep = parseFloat(newStep.toFixed(this.decimalPlaces));
+
+                return newStep;
             },
 
             continueValueManipulation : function()
@@ -169,7 +179,7 @@
 
             incrementValue: function()
             {
-                if ((this.value + this.currentChangeStep) <= this.max)
+                if ((this.internalValue + this.currentChangeStep) <= this.max)
                     this.inputValue += this.currentChangeStep;
                 else
                     this.inputValue = this.max;
@@ -177,7 +187,7 @@
 
             decrementValue: function()
             {
-                if ((this.value - this.currentChangeStep) >= this.min)
+                if ((this.internalValue - this.currentChangeStep) >= this.min)
                     this.inputValue -= this.currentChangeStep;
                 else
                     this.inputValue = this.min;
