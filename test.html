@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+
+    <title>Spinner Test</title>
+
+    <link rel="import" href="lib/polymer/polymer.html">
+
+    <link rel="import" href="input-number-spinner-ui.html">
+</head>
+<body>
+    <h1>Input Number Spinner Test</h1>
+    <p>
+        This test demonstrates the use of the &ltinput-number-spinner-ui&gt element.
+        It requires that your browser supports Web Components.
+    </p>
+    <input-number-spinner-ui oninput="console.log('INPUT!')" value="1000" min="10" max="10000" step="2" initialDelay="500" changeInterval="110" accelerateManipulation="true" decimalPlaces="0">My Value:</input-number-spinner-ui>
+</body>
+</html>

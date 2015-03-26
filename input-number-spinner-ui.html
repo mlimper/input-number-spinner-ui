@@ -1,0 +1,187 @@
+<polymer-element name="input-number-spinner-ui" attributes="value min max step initialDelay changeInterval accelerateManipulation decimalPlaces oninput">
+    <template>
+
+        <style>
+            #buttonContainer
+            {
+                display: inline-block;
+                width: 1.2em;
+                height: 1.3em;
+                vertical-align: text-top;
+            }
+            #incButton, #decButton
+            {
+                font-size: 30%;
+                display: block;
+                width: 100%;
+                height: 49%;
+                padding:0;
+                margin:0;
+            }
+        </style>
+
+        <span id="label"><content></content></span>
+
+        <input type="text" id="counterVal" on-change={{textFieldInputChanged}}" value="{{textFieldValue}}">
+
+        <div id="buttonContainer">
+            <button id="incButton" on-mousedown="{{startIncrementManipulation}}" on-mouseup="{{stopManipulation}}">&#9650;</button>
+            <button id="decButton" on-mousedown="{{startDecrementManipulation}}" on-mouseup="{{stopManipulation}}">&#9660;</button>
+        </div>
+
+    </template>
+    <script>
+        Polymer({
+            value: 0,
+
+            min: 0,
+
+            max: 10,
+
+            step: 1,
+
+            inputValue: 0, // Default value
+
+            initialDelay: 100, //in ms
+
+            changeInterval: 10, //in ms
+
+            currentChangeStep: 1,
+
+            oninput: null,
+
+            accelerateManipulation: true,
+
+            manipulationStart: 0,
+
+            maxManipulationSpeedTime: 8000, //in ms
+
+            maxManipulationSpeedFactor: 200,
+
+            manipulationDirection: 0,
+
+            decimalPlaces: 2,
+
+            textFieldValue: "0",
+
+            ready: function()
+            {
+                this.inputValue = this.value;
+            },
+
+            textFieldInputChanged: function()
+            {
+                var parsedValue = parseFloat(this.textFieldValue);
+
+                if (!isNaN(parsedValue))
+                {
+                    this.inputValue = Math.min(Math.max(this.min, parsedValue), this.max);
+                }
+                else
+                {
+                    this.textFieldValue = this.value;
+                }
+            },
+
+            inputValueChanged: function()
+            {
+                var lastVal = this.value;
+
+                this.value = parseFloat(this.inputValue.toFixed(this.decimalPlaces));
+
+                this.textFieldValue = this.value;
+
+                if ((this.value != lastVal) && this.oninput)
+                {
+                    this.oninput(this.value);
+                }
+            },
+
+            startDecrementManipulation: function()
+            {
+                this.manipulationDirection = -1;
+
+                this.textFieldInputChanged();
+
+                this.decrementValue();
+
+                this.initContinuousManipulation();
+            },
+
+            startIncrementManipulation: function()
+            {
+                this.manipulationDirection = 1;
+
+                this.textFieldInputChanged();
+
+                this.incrementValue();
+
+                this.initContinuousManipulation();
+            },
+
+            initContinuousManipulation: function()
+            {
+                this.currentChangeStep = this.step;
+                this.manipulationStart = Date.now();
+                this.scheduleNextValueManipulation(this.initialDelay);
+            },
+
+            scheduleNextValueManipulation: function(delay)
+            {
+                this.async(this.continueValueManipulation, null, delay);
+            },
+
+            smoothstep: function(min, max, value)
+            {
+                var x = Math.max(0, Math.min(1, (value-min)/(max-min)));
+                return x*x*(3 - 2*x);
+            },
+
+            computeChangeStep: function(t)
+            {
+                var value = Math.min(this.maxManipulationSpeedTime, t) / this.maxManipulationSpeedTime;
+
+                return this.step * this.maxManipulationSpeedFactor * this.smoothstep(0, this.maxManipulationSpeedTime, t);
+            },
+
+            continueValueManipulation : function()
+            {
+                if (this.manipulationDirection != 0)
+                {
+                    if (this.manipulationDirection < 0)
+                        this.decrementValue();
+                    else
+                        this.incrementValue();
+
+                    if (this.accelerateManipulation)
+                    {
+                        this.currentChangeStep = this.computeChangeStep(Date.now() - this.manipulationStart);
+                    }
+
+                    this.scheduleNextValueManipulation(this.changeInterval);
+                }
+            },
+
+            stopManipulation: function()
+            {
+                this.manipulationDirection = 0;
+            },
+
+            incrementValue: function()
+            {
+                if ((this.value + this.currentChangeStep) <= this.max)
+                    this.inputValue += this.currentChangeStep;
+                else
+                    this.inputValue = this.max;
+            },
+
+            decrementValue: function()
+            {
+                if ((this.value - this.currentChangeStep) >= this.min)
+                    this.inputValue -= this.currentChangeStep;
+                else
+                    this.inputValue = this.min;
+            }
+        });
+    </script>
+</polymer-element>
